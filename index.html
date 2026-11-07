@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<!-- Configuración PWA e Iconos -->
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="EnergyClub">
+<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2964/2964514.png">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Control de Cuotas & Fidelidad</title>
@@ -253,3 +260,100 @@
       const dni = document.getElementById("inputDni").value.trim();
       if (!dni) {
         alert("Por favor ingresá tu DNI antes de abrir la cámara.");
+        return;
+      }
+
+      document.getElementById("reader-container").classList.remove("hidden");
+      document.getElementById("btnAbrirCamara").classList.add("hidden");
+
+      html5QrCode = new Html5Qrcode("reader");
+      const config = { fps: 10, qrbox: { width: 240, height: 240 } };
+
+      html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        (decodedText) => {
+          // Al escanear con éxito
+          detenerCamara();
+          procesarRegistroPago(decodedText);
+        },
+        (errorMessage) => {
+          // Lectura cuadro a cuadro ignorada
+        }
+      ).catch((err) => {
+        console.error("Error al iniciar cámara:", err);
+        alert("No se pudo acceder a la cámara. Asegurate de otorgar los permisos en el navegador.");
+        detenerCamara();
+      });
+    }
+
+    function detenerCamara() {
+      if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+          html5QrCode.clear();
+          document.getElementById("reader-container").classList.add("hidden");
+          document.getElementById("btnAbrirCamara").classList.remove("hidden");
+        }).catch(err => console.error(err));
+      } else {
+        document.getElementById("reader-container").classList.add("hidden");
+        document.getElementById("btnAbrirCamara").classList.remove("hidden");
+      }
+    }
+
+    function simularLecturaQR() {
+      const ahora = new Date();
+      const tokenMes = `GYM-PAGO-${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}`;
+      procesarRegistroPago(tokenMes);
+    }
+
+    // =========================================================================
+    // 5. AUXILIARES DE INTERFAZ
+    // =========================================================================
+    function actualizarVistaRacha(racha, ultimoMes) {
+      document.getElementById("txtRacha").innerText = racha;
+
+      let descuento = 0;
+      if (racha >= 12) {
+        descuento = 100;
+      } else {
+        descuento = tablaDescuentos[racha] || 0;
+      }
+
+      document.getElementById("txtDescuento").innerText = descuento + "%";
+
+      const rachaLimitada = Math.min(racha, 12);
+      const porcentaje = (rachaLimitada / 12) * 100;
+      document.getElementById("barraProgreso").style.width = porcentaje + "%";
+      document.getElementById("txtProgresoMes").innerText = `${rachaLimitada}/12`;
+
+      if (ultimoMes) {
+        document.getElementById("txtUltimoMes").innerText = `Último mes abonado: ${ultimoMes}`;
+      } else {
+        document.getElementById("txtUltimoMes").innerText = "Sin registros previos";
+      }
+    }
+
+    function mostrarStatus(texto, tipo) {
+      const el = document.getElementById("statusMensaje");
+      el.classList.remove("hidden", "bg-emerald-950", "text-emerald-400", "border-emerald-800", "bg-rose-950", "text-rose-400", "border-rose-800", "bg-slate-800", "text-slate-300", "border-slate-700");
+      el.innerText = texto;
+
+      if (tipo === "success") {
+        el.classList.add("bg-emerald-950", "text-emerald-400", "border", "border-emerald-800");
+      } else if (tipo === "error") {
+        el.classList.add("bg-rose-950", "text-rose-400", "border", "border-rose-800");
+      } else {
+        el.classList.add("bg-slate-800", "text-slate-300", "border", "border-slate-700");
+      }
+    }
+	// Registrar el Service Worker para habilitar la instalación PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(() => console.log('PWA lista para instalar'))
+      .catch((err) => console.error('Error al registrar Service Worker:', err));
+  });
+}
+  </script>
+</body>
+</html>
