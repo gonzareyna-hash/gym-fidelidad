@@ -1,0 +1,22 @@
+{
+  "name": "Energy Club - Control de Cuotas",
+  "short_name": "EnergyClub",
+  "description": "App de fidelidad y pagos de cuotas para el gimnasio",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2964/2964514.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2964/2964514.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
