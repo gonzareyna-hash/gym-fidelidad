@@ -1,0 +1,211 @@
+admin	
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Panel de Socios y Fidelidad</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body { background-color: #0b1120; color: #f8fafc; font-family: system-ui, sans-serif; }
+    .neon-orange { color: #ff6b00; }
+  </style>
+</head>
+<body class="min-h-screen p-4 sm:p-8">
+
+  <div class="max-w-6xl mx-auto space-y-6">
+
+    <!-- Encabezado -->
+    <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800 pb-5">
+      <div>
+        <div class="flex items-center gap-2">
+          <i data-lucide="shield-check" class="w-7 h-7 text-orange-500"></i>
+          <h1 class="text-2xl font-black uppercase tracking-wider text-white">Panel <span class="neon-orange">Dueños</span></h1>
+        </div>
+        <p class="text-xs text-slate-400 mt-1">Control de socios, estados de cuota y avance del programa de fidelidad</p>
+      </div>
+
+      <button onclick="cargarSocios()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 transition-colors">
+        <i data-lucide="refresh-cw" class="w-4 h-4 text-orange-400" id="iconReload"></i> Actualizar Datos
+      </button>
+    </header>
+
+    <!-- Tarjetas de Métricas -->
+    <section class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg">
+        <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Total Socios Registrados</p>
+        <p class="text-2xl font-black text-white mt-1" id="statTotalSocios">0</p>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg">
+        <p class="text-xs text-emerald-400 font-bold uppercase tracking-wider">Al Día (Mes Actual)</p>
+        <p class="text-2xl font-black text-emerald-400 mt-1" id="statAlDia">0</p>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg">
+        <p class="text-xs text-amber-400 font-bold uppercase tracking-wider">Pendientes de Pago</p>
+        <p class="text-2xl font-black text-amber-400 mt-1" id="statPendientes">0</p>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg">
+        <p class="text-xs text-orange-400 font-bold uppercase tracking-wider">Cerca del Mes Gratis (10+)</p>
+        <p class="text-2xl font-black text-orange-400 mt-1" id="statCercaGratis">0</p>
+      </div>
+    </section>
+
+    <!-- Barra de Búsqueda y Filtros -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row gap-3 items-center justify-between shadow-lg">
+      <div class="relative w-full sm:w-80">
+        <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-3"></i>
+        <input id="inputBuscar" oninput="filtrarTabla()" type="text" placeholder="Buscar por DNI o Nombre..." 
+          class="w-full bg-slate-800 border border-slate-700 pl-9 pr-3 py-2 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-orange-500">
+      </div>
+
+      <div class="flex items-center gap-2 w-full sm:w-auto overflow-x-auto text-xs">
+        <button onclick="setFiltro('todos')" class="filtro-btn px-3 py-1.5 rounded-lg bg-orange-600 text-white font-bold" data-filtro="todos">Todos</button>
+        <button onclick="setFiltro('al-dia')" class="filtro-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white" data-filtro="al-dia">Al Día</button>
+        <button onclick="setFiltro('pendientes')" class="filtro-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white" data-filtro="pendientes">Pendientes</button>
+        <button onclick="setFiltro('inactivos')" class="filtro-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white" data-filtro="inactivos">Inactivos</button>
+      </div>
+    </section>
+
+    <!-- Tabla Principal de Socios -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-slate-800/80 text-[11px] uppercase font-bold text-slate-400 border-b border-slate-800">
+            <tr>
+              <th class="py-3 px-4">DNI</th>
+              <th class="py-3 px-4">Socio</th>
+              <th class="py-3 px-4 text-center">Racha Actual</th>
+              <th class="py-3 px-4 text-center">Último Pago</th>
+              <th class="py-3 px-4 text-center">Estado Cuota</th>
+              <th class="py-3 px-4 text-right">Progreso Año</th>
+            </tr>
+          </thead>
+          <tbody id="tablaBody" class="divide-y divide-slate-800">
+            <tr>
+              <td colspan="6" class="text-center py-8 text-slate-500">Cargando datos desde la base...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // PEGA AQUÍ TU MISMA URL DE GOOGLE APPS SCRIPT
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwPq-iE93vjI7oK3eX9362MvI6K9sU80f8o-EXAMPLE/exec";
+
+    let listaSocios = [];
+    let filtroActivo = "todos";
+
+    async function cargarSocios() {
+      const icon = document.getElementById("iconReload");
+      icon.classList.add("animate-spin");
+
+      try {
+        const response = await fetch(SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "OBTENER_TODOS_SOCIOS" })
+        });
+
+        const res = await response.json();
+        if (res.success) {
+          listaSocios = res.socios;
+          actualizarMetricas();
+          renderizarTabla();
+        } else {
+          alert("Error: " + res.error);
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Error de conexión al cargar el panel.");
+      } finally {
+        icon.classList.remove("animate-spin");
+      }
+    }
+
+    function actualizarMetricas() {
+      document.getElementById("statTotalSocios").innerText = listaSocios.length;
+      document.getElementById("statAlDia").innerText = listaSocios.filter(s => s.statusColor === "success").length;
+      document.getElementById("statPendientes").innerText = listaSocios.filter(s => s.statusColor === "warning").length;
+      document.getElementById("statCercaGratis").innerText = listaSocios.filter(s => s.racha >= 10).length;
+    }
+
+    function renderizarTabla() {
+      const tbody = document.getElementById("tablaBody");
+      const busqueda = document.getElementById("inputBuscar").value.toLowerCase().trim();
+
+      const filtrados = listaSocios.filter(s => {
+        const coincideTexto = s.dni.toLowerCase().includes(busqueda) || s.nombre.toLowerCase().includes(busqueda);
+        if (!coincideTexto) return false;
+
+        if (filtroActivo === "al-dia") return s.statusColor === "success";
+        if (filtroActivo === "pendientes") return s.statusColor === "warning";
+        if (filtroActivo === "inactivos") return s.statusColor === "danger";
+        return true;
+      });
+
+      if (filtrados.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-500">No se encontraron socios.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtrados.map(s => {
+        const porcentaje = Math.min((s.racha / 12) * 100, 100);
+
+        let badgeColor = "bg-rose-950 text-rose-400 border-rose-800";
+        if (s.statusColor === "success") badgeColor = "bg-emerald-950 text-emerald-400 border-emerald-800";
+        if (s.statusColor === "warning") badgeColor = "bg-amber-950 text-amber-400 border-amber-800";
+
+        return `
+          <tr class="hover:bg-slate-800/40 transition-colors">
+            <td class="py-3 px-4 font-mono font-bold text-white">${s.dni}</td>
+            <td class="py-3 px-4 font-semibold text-slate-200">${s.nombre}</td>
+            <td class="py-3 px-4 text-center">
+              <span class="inline-flex items-center gap-1 font-black text-orange-400 text-sm">
+                <i data-lucide="flame" class="w-3.5 h-3.5 text-orange-500"></i> ${s.racha} m
+              </span>
+            </td>
+            <td class="py-3 px-4 text-center font-mono text-slate-400">${s.ultimoMes}</td>
+            <td class="py-3 px-4 text-center">
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${badgeColor}">
+                ${s.estado}
+              </span>
+            </td>
+            <td class="py-3 px-4 text-right">
+              <div class="w-24 ml-auto bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700">
+                <div class="bg-orange-500 h-full" style="width: ${porcentaje}%"></div>
+              </div>
+              <span class="text-[9px] text-slate-500 font-semibold">${s.racha}/12</span>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      lucide.createIcons();
+    }
+
+    function setFiltro(tipo) {
+      filtroActivo = tipo;
+      document.querySelectorAll(".filtro-btn").forEach(btn => {
+        if (btn.dataset.filtro === tipo) {
+          btn.className = "filtro-btn px-3 py-1.5 rounded-lg bg-orange-600 text-white font-bold";
+        } else {
+          btn.className = "filtro-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white";
+        }
+      });
+      renderizarTabla();
+    }
+
+    function filtrarTabla() {
+      renderizarTabla();
+    }
+
+    lucide.createIcons();
+    cargarSocios();
+  </script>
+</body>
+</html>
